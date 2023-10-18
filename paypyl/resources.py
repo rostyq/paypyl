@@ -49,7 +49,15 @@ class Webhook(BaseModel):
     links: List[Link] | None = None
 
 
-class Event(BaseModel, Generic[R]):
-    # TODO: add event fields
-    links: Optional[Links] = None
-    resource: R
+class Event(BaseModel):
+    id: str
+    create_time: datetime = Field(repr=False)
+    resource_type: str
+    event_version: str = Field(repr=False)
+    event_type: str
+    summary: str = Field(repr=False)
+    resource_version: str = Field(repr=False)
+    resource: Resource = Field(repr=False)
+    links: Optional[Links] = Field(None, repr=False)
+
+    model_config = ConfigDict(extra="allow")

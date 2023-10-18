@@ -1,16 +1,32 @@
 from typing import Optional, TypeVar, Generic, List
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, AliasChoices
 
 from .types import *
+
+
+class WebhookSignature(BaseModel):
+    auth_algo: str = Field(
+        validation_alias=AliasChoices("auth_algo", "PAYPAL-AUTH-ALGO")
+    )
+    cert_url: str = Field(validation_alias=AliasChoices("cert_url", "PAYPAL-CERT-URL"))
+    transmission_id: str = Field(
+        validation_alias=AliasChoices("transmission_id", "PAYPAL-TRANSMISSION-ID")
+    )
+    transmission_sig: str = Field(
+        validation_alias=AliasChoices("transmission_sig", "PAYPAL-TRANSMISSION-SIG")
+    )
+    transmission_time: datetime = Field(
+        validation_alias=AliasChoices("transmission_time", "PAYPAL-TRANSMISSION-TIME")
+    )
 
 
 class Link(BaseModel):
     href: str
     rel: str
     method: Optional[Method] = None
-
+    enc_type: Optional[str] = Field(None, alias="encType", exclude=True)
 
 Links = List[Link]
 
@@ -19,7 +35,7 @@ class Resource(BaseModel):
     id: str | None = None
     create_time: datetime | None = Field(None, repr=False)
     update_time: datetime | None = Field(None, repr=False)
-    links: Optional[Links] = Field(None, exclude=True, repr=False)
+    links: Optional[Links] = Field(None, repr=False)
 
     model_config = ConfigDict(extra="allow")
 
@@ -144,7 +160,7 @@ class ShippingDetail(BaseModel):
 class Card(BaseModel):
     name: str | None = None
     number: str
-    security_code : str | None = None
+    security_code: str | None = None
     expiry: str
     billing_address: Optional[Address] = None
 

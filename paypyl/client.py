@@ -340,34 +340,51 @@ class Client:
     def delete_webhook(self, webhook_id: str, /):
         self._delete("v1/notifications/webhooks", webhook_id)
 
-    def verify_webhook_signature(
+    def verify_event(
         self,
+        /,
         webhook_id: str,
-        headers: Mapping[str, str],
-        data: Any,
+        signature: WebhookSignature | Mapping[str, Any],
+        event: Event | Mapping[str, Any],
+        *,
         dry_run: bool = False,
-    ):
-        payload = {
-            "auth_algo": headers["PAYPAL-AUTH-ALGO"],
-            "cert_url": headers["PAYPAL-CERT-URL"],
-            "transmission_id": headers["PAYPAL-TRANSMISSION-ID"],
-            "transmission_sig": headers["PAYPAL-TRANSMISSION-SIG"],
-            "transmission_time": headers["PAYPAL-TRANSMISSION-TIME"],
-            "webhook_id": webhook_id,
-            "webhook_event": data,
-        }
+    ) -> Event:
+        if not isinstance(signature, WebhookSignature):
+            signature = WebhookSignature.model_validate(signature)
 
-        if dry_run:
-            return
+        if not isinstance(event, Event):
+            event = Event.model_validate(event)
 
-        url = self / "v1/notifications/verify-webhook-signature"
-        response = self.session.post(url=url, json=payload)
-        response.raise_for_status()
+        if not dry_run:
+            payload = {
+                "webhook_id": webhook_id,
+                "webhook_event": event.model_dump(
+                    mode="json",
+                    include=[
+                        "id",
+                        "create_time",
+                        "resource_type",
+                        "event_type",
+                        "summary",
+                        "resource",
+                    ],
+                ),
+                **signature.model_dump(mode="json", exclude_none=True),
+            }
+            from pprint import pprint
 
-        result = WebhookSignature.model_validate_json(response.content)
-        status = result.verification_status
+            pprint(payload)
 
-        assert status == "SUCCESS", status
+            url = self / "v1/notifications/verify-webhook-signature"
+            response = self.session.post(url=url, json=payload)
+            response.raise_for_status()
+
+            result = WebhookSignatureResponse.model_validate_json(response.content)
+            status = result.verification_status
+
+            assert status == "SUCCESS", status
+
+        return event
 
     def __del__(self):
         self.session.close()

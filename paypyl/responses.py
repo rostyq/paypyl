@@ -17,5 +17,5 @@ class TokenResult(BaseModel):
     nonce: str
 
 
-class WebhookSignature(BaseModel):
+class WebhookSignatureResponse(BaseModel):
     verification_status: Literal["SUCCESS", "FAILURE"]
